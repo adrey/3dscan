@@ -7,7 +7,9 @@ import numpy as np
 import ArducamDepthCamera as ac
 import socket
 
-
+record_path = None
+if len(sys.argv) > 1:
+  record_path = sys.argv[1]
 
 MAX_DISTANCE = 4
 
@@ -50,6 +52,7 @@ cur_frame = 0
 buf = {}
 # Process tasks forever
 chunks = 5
+count = 0
 while True:
     raw = client_socket.recvfrom(43202)
     sender = raw[1]
@@ -66,10 +69,19 @@ while True:
       buf[t] = raw
     if len(buf) != chunks:
       continue
-   
-    data = np.frombuffer(bytearray(buf[1]), dtype=np.uint8)
+  
+    count += 1
+    amp_data =  bytearray(buf[1])
+    data = np.frombuffer(amp_data, dtype=np.uint8)
     data = np.reshape(data, newshape=(180, 240))
-    depth_buf = np.frombuffer(bytearray(buf[2] + buf[3] + buf[4] + buf[5]), dtype=np.float32)
+    depth_data = bytearray(buf[2] + buf[3] + buf[4] + buf[5])
+    if record_path != None:
+      with open(f"{record_path}amp_{count}.bin", 'wb+') as fout:
+       fout.write(amp_data)
+      with open(f"{record_path}depth_{count}.bin", 'wb+') as fout:
+       fout.write(depth_data)
+
+    depth_buf = np.frombuffer(depth_data, dtype=np.float32)
     depth_buf = np.reshape(depth_buf, newshape=(180, 240))
     amplitude_buf = data
     #amplitude_buf*=(255/1024)
